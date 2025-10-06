@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Youtube } from 'lucide-react';
 
@@ -8,7 +7,7 @@ export const Header: React.FC = () => (
             <div className="flex items-center space-x-3 text-purple-400">
                 <Youtube size={32} />
                 <h1 className="text-xl md:text-2xl font-bold text-gray-100 tracking-tight">
-                    YouTube Transcript AI Analyzer
+                    Analizador IA de Transcripciones de YouTube
                 </h1>
             </div>
         </div>

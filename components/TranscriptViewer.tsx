@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import type { VideoTranscript } from '../types';
 import { BotMessageSquare, Download, LoaderCircle, ChevronDown, ChevronUp } from 'lucide-react';
@@ -34,7 +33,7 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ transcripts 
     const [analysis, setAnalysis] = useState<string>('');
     const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
     const [analysisError, setAnalysisError] = useState<string | null>(null);
-    const [customPrompt, setCustomPrompt] = useState<string>('Summarize the key topics and recurring themes from these transcripts. Identify the main message of the channel based on this content.');
+    const [customPrompt, setCustomPrompt] = useState<string>('Resume los temas clave y los temas recurrentes de estas transcripciones. Identifica el mensaje principal del canal basándote en este contenido.');
 
     const handleAnalyze = useCallback(async () => {
         setIsAnalyzing(true);
@@ -50,12 +49,12 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ transcripts 
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'An unknown error occurred during analysis.');
+                throw new Error(data.error || 'Ocurrió un error desconocido durante el análisis.');
             }
             
             setAnalysis(data.analysis);
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred during analysis.';
+            const errorMessage = err instanceof Error ? err.message : 'Ocurrió un error desconocido durante el análisis.';
             setAnalysisError(errorMessage);
         } finally {
             setIsAnalyzing(false);
@@ -63,15 +62,15 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ transcripts 
     }, [transcripts, customPrompt]);
 
     const handleExport = useCallback(() => {
-        const content = `YOUTUBE CHANNEL TRANSCRIPT EXPORT\n\n${'='.repeat(50)}\n\n`
+        const content = `EXPORTACIÓN DE TRANSCRIPCIONES DE CANAL DE YOUTUBE\n\n${'='.repeat(50)}\n\n`
             + transcripts.map(t => `VIDEO: ${t.title}\nURL: ${t.url}\n\n${t.transcript}\n\n${'-'.repeat(50)}\n`).join('\n')
-            + (analysis ? `\n\n${'='.repeat(50)}\nGEMINI AI ANALYSIS\n${'='.repeat(50)}\n\n${analysis}` : '');
+            + (analysis ? `\n\n${'='.repeat(50)}\nANÁLISIS IA DE GEMINI\n${'='.repeat(50)}\n\n${analysis}` : '');
 
         const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'transcripts_export.txt';
+        a.download = 'exportacion_transcripciones.txt';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -81,7 +80,7 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ transcripts 
     return (
         <div className="space-y-8">
             <div>
-                <h2 className="text-2xl font-bold mb-4 text-purple-400">Extracted Transcripts</h2>
+                <h2 className="text-2xl font-bold mb-4 text-purple-400">Transcripciones Extraídas</h2>
                 <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
                     {transcripts.map((t, i) => <TranscriptItem key={t.id} transcript={t} index={i} />)}
                 </div>
@@ -90,13 +89,13 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ transcripts 
             <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700">
                 <h2 className="text-2xl font-bold mb-4 flex items-center text-purple-400">
                     <BotMessageSquare className="mr-3" />
-                    AI Analysis with Gemini
+                    Análisis IA con Gemini
                 </h2>
                 <div className="space-y-4">
                     <textarea
                         value={customPrompt}
                         onChange={(e) => setCustomPrompt(e.target.value)}
-                        placeholder="Enter your analysis prompt here..."
+                        placeholder="Introduce tu instrucción para el análisis aquí..."
                         className="w-full h-24 bg-gray-900 border border-gray-600 rounded-md p-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
                         disabled={isAnalyzing}
                     />
@@ -108,9 +107,9 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ transcripts 
                         {isAnalyzing ? (
                             <>
                                 <LoaderCircle className="animate-spin mr-2" size={20} />
-                                <span>Analyzing...</span>
+                                <span>Analizando...</span>
                             </>
-                        ) : 'Analyze with Gemini'}
+                        ) : 'Analizar con Gemini'}
                     </button>
                 </div>
                 
@@ -118,7 +117,7 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ transcripts 
                 
                 {analysis && (
                     <div className="mt-6">
-                        <h3 className="text-lg font-semibold mb-2 text-gray-300">Analysis Result:</h3>
+                        <h3 className="text-lg font-semibold mb-2 text-gray-300">Resultado del Análisis:</h3>
                         <div className="bg-gray-900 p-4 rounded-md border border-gray-600 max-h-80 overflow-y-auto">
                             <p className="text-gray-300 whitespace-pre-wrap leading-relaxed">{analysis}</p>
                         </div>
@@ -131,7 +130,7 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ transcripts 
                 className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-colors"
             >
                 <Download className="mr-2" size={20} />
-                Export All as .txt
+                Exportar Todo como .txt
             </button>
         </div>
     );

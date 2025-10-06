@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import type { VideoTranscript, VideoInfo } from './types';
 import { Language } from './types';
@@ -18,37 +17,37 @@ const App: React.FC = () => {
 
     const handleExtract = useCallback(async () => {
         if (!channelUrl.trim()) {
-            setError('Please enter a valid YouTube channel URL.');
+            setError('Por favor, introduce una URL de canal de YouTube válida.');
             return;
         }
         
         setError(null);
         setIsLoading(true);
         setTranscripts([]);
-        setProgress({ current: 0, total: 0, message: 'Initializing...' });
+        setProgress({ current: 0, total: 0, message: 'Inicializando...' });
 
         try {
-            setProgress({ current: 0, total: 0, message: 'Fetching video list from channel...' });
+            setProgress({ current: 0, total: 0, message: 'Obteniendo la lista de videos del canal...' });
             
             const videosResponse = await fetch(`/api/get-videos?channelUrl=${encodeURIComponent(channelUrl)}`);
             if (!videosResponse.ok) {
                 const errorData = await videosResponse.json();
-                throw new Error(errorData.error || `Failed to fetch video list. Status: ${videosResponse.status}`);
+                throw new Error(errorData.error || `Error al obtener la lista de videos. Estado: ${videosResponse.status}`);
             }
             const videos: VideoInfo[] = await videosResponse.json();
             
             if (videos.length === 0) {
-                setError('No videos found for this channel or the URL is incorrect.');
+                setError('No se encontraron videos para este canal o la URL es incorrecta.');
                 setIsLoading(false);
                 return;
             }
 
-            setProgress(prev => ({ ...prev, total: videos.length, message: `Found ${videos.length} videos. Starting transcript extraction...` }));
+            setProgress(prev => ({ ...prev, total: videos.length, message: `Se encontraron ${videos.length} videos. Iniciando extracción de transcripciones...` }));
             
             const extractedTranscripts: VideoTranscript[] = [];
             for (let i = 0; i < videos.length; i++) {
                 const video = videos[i];
-                setProgress({ current: i + 1, total: videos.length, message: `Extracting transcript for "${video.title}"...` });
+                setProgress({ current: i + 1, total: videos.length, message: `Extrayendo transcripción para "${video.title}"...` });
                 
                 try {
                     const transcriptResponse = await fetch(`/api/get-transcript?videoId=${video.id}&language=${language}`);
@@ -56,7 +55,7 @@ const App: React.FC = () => {
 
                     const newTranscript: VideoTranscript = {
                         ...video,
-                        transcript: transcriptData.transcript || '[Error fetching transcript]',
+                        transcript: transcriptData.transcript || '[Error al obtener la transcripción]',
                     };
                     extractedTranscripts.push(newTranscript);
                     setTranscripts([...extractedTranscripts]);
@@ -64,19 +63,19 @@ const App: React.FC = () => {
                     console.warn(`Could not fetch transcript for video ${video.id}:`, e);
                      const newTranscript: VideoTranscript = {
                         ...video,
-                        transcript: '[Transcript fetch failed]',
+                        transcript: '[Falló la obtención de la transcripción]',
                     };
                     extractedTranscripts.push(newTranscript);
                     setTranscripts([...extractedTranscripts]);
                 }
             }
 
-            setProgress({ current: videos.length, total: videos.length, message: 'Extraction complete!' });
+            setProgress({ current: videos.length, total: videos.length, message: '¡Extracción completada!' });
 
         } catch (err) {
             console.error(err);
-            const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-            setError(`Failed to extract transcripts. ${errorMessage}`);
+            const errorMessage = err instanceof Error ? err.message : 'Ocurrió un error desconocido.';
+            setError(`Error al extraer las transcripciones. ${errorMessage}`);
         } finally {
             setIsLoading(false);
         }

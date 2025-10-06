@@ -5,21 +5,21 @@ import type { VideoTranscript } from '../types';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
-        return res.status(405).json({ error: 'Method Not Allowed' });
+        return res.status(405).json({ error: 'Método no permitido' });
     }
 
     const { transcripts, customPrompt } = req.body;
 
-    if (!process.env.GEMINI_API_KEY) {
-        console.error('GEMINI_API_KEY environment variable not set.');
-        return res.status(500).json({ error: 'Server configuration error: Missing API Key.' });
+    if (!process.env.API_KEY) {
+        console.error('API_KEY environment variable not set.');
+        return res.status(500).json({ error: 'Error de configuración del servidor: Falta la clave de API.' });
     }
     if (!Array.isArray(transcripts) || transcripts.length === 0 || !customPrompt) {
-        return res.status(400).json({ error: 'Invalid request body. "transcripts" array and "customPrompt" are required.' });
+        return res.status(400).json({ error: 'Cuerpo de la solicitud no válido. Se requieren el array "transcripts" y "customPrompt".' });
     }
 
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
         const combinedTranscripts = (transcripts as VideoTranscript[])
             .map(t => `--- Video: ${t.title} ---\n${t.transcript}`)
@@ -39,6 +39,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ analysis: response.text });
     } catch (error: any) {
         console.error("Error calling Gemini API:", error);
-        return res.status(500).json({ error: "An error occurred while communicating with the Gemini API.", details: error.message });
+        return res.status(500).json({ error: "Ocurrió un error al comunicarse con la API de Gemini.", details: error.message });
     }
 }

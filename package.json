@@ -4,9 +4,9 @@
   "private": true,
   "description": "Extracts and analyzes YouTube transcripts with AI.",
   "scripts": {
-    "dev": "vercel dev",
-    "build": "echo 'Build step not required for this static setup with serverless functions'",
-    "start": "echo 'Use vercel dev to run locally'"
+    "dev": "vite",
+    "build": "vite build",
+    "start": "vercel dev"
   },
   "dependencies": {
     "@google/genai": "^1.22.0",
@@ -21,6 +21,8 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vercel/node": "^3.1.5",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11",
+    "@vitejs/plugin-react": "^4.3.0"
   }
 }

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Youtube, Languages, Film, LoaderCircle } from 'lucide-react';
 import { Language } from '../types';
@@ -28,7 +27,7 @@ export const ChannelInputForm: React.FC<ChannelInputFormProps> = ({
                     type="text"
                     value={channelUrl}
                     onChange={(e) => setChannelUrl(e.target.value)}
-                    placeholder="Enter YouTube Channel URL"
+                    placeholder="Introduce la URL del canal de YouTube"
                     className="w-full bg-gray-900 border border-gray-600 rounded-md py-3 pl-10 pr-4 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
                     disabled={isLoading}
                 />
@@ -37,7 +36,7 @@ export const ChannelInputForm: React.FC<ChannelInputFormProps> = ({
             <div className="space-y-2">
                 <label htmlFor="language-select" className="flex items-center space-x-2 text-gray-400">
                     <Languages size={18} />
-                    <span>Preferred Language</span>
+                    <span>Idioma Preferido</span>
                 </label>
                 <select
                     id="language-select"
@@ -47,8 +46,8 @@ export const ChannelInputForm: React.FC<ChannelInputFormProps> = ({
                     disabled={isLoading}
                 >
                     <option value={Language.Spanish}>Español</option>
-                    <option value={Language.English}>English</option>
-                    <option value={Language.Portuguese}>Português</option>
+                    <option value={Language.English}>Inglés</option>
+                    <option value={Language.Portuguese}>Portugués</option>
                 </select>
             </div>
 
@@ -60,10 +59,10 @@ export const ChannelInputForm: React.FC<ChannelInputFormProps> = ({
                 {isLoading ? (
                     <>
                         <LoaderCircle className="animate-spin mr-2" size={20} />
-                        <span>Extracting...</span>
+                        <span>Extrayendo...</span>
                     </>
                 ) : (
-                    'Extract Transcripts'
+                    'Extraer Transcripciones'
                 )}
             </button>
         </div>

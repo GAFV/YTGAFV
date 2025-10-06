@@ -31,19 +31,19 @@ const getChannelIdFromUrl = (url: string): string | null => {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'GET') {
         res.setHeader('Allow', 'GET');
-        return res.status(405).json({ error: 'Method Not Allowed' });
+        return res.status(405).json({ error: 'Método no permitido' });
     }
 
     const { channelUrl } = req.query;
 
     if (!channelUrl || typeof channelUrl !== 'string') {
-        return res.status(400).json({ error: 'The `channelUrl` query parameter is required.' });
+        return res.status(400).json({ error: 'El parámetro de consulta `channelUrl` es obligatorio.' });
     }
 
     try {
         const channelId = getChannelIdFromUrl(channelUrl);
         if (!channelId) {
-            return res.status(400).json({ error: 'Could not determine a valid channel identifier from the URL.' });
+            return res.status(400).json({ error: 'No se pudo determinar un identificador de canal válido desde la URL.' });
         }
         
         let allVideos: any[] = [];
@@ -64,7 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         if (allVideos.length === 0) {
-            return res.status(404).json({ error: 'No videos found for this channel.' });
+            return res.status(404).json({ error: 'No se encontraron videos para este canal.' });
         }
 
         const formattedVideos: VideoInfo[] = allVideos.map((video: any) => ({
@@ -78,6 +78,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     } catch (error: any) {
         console.error('Error fetching channel videos:', error);
-        return res.status(500).json({ error: 'Failed to fetch video list from YouTube.', details: error.message });
+        return res.status(500).json({ error: 'Error al obtener la lista de videos de YouTube.', details: error.message });
     }
 }
