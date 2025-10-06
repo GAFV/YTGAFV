@@ -7,9 +7,10 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
+    "isolatedModules": true,
     "jsx": "react-jsx"
   },
   "include": ["**/*.ts", "**/*.tsx"],
