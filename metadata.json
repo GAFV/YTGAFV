@@ -1,0 +1,5 @@
+{
+  "name": "YouTube Transcript AI Analyzer",
+  "description": "An application to extract and analyze transcripts from YouTube channels using AI. Input a channel URL, select your preferences, and let Gemini provide insights from the video content.",
+  "requestFramePermissions": []
+}

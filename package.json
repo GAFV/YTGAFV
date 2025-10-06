@@ -1,0 +1,26 @@
+{
+  "name": "youtube-transcript-ai-analyzer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Extracts and analyzes YouTube transcripts with AI.",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'Build step not required for this static setup with serverless functions'",
+    "start": "echo 'Use vercel dev to run locally'"
+  },
+  "dependencies": {
+    "@google/genai": "^1.22.0",
+    "lucide-react": "^0.544.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "yt-channel-info": "^3.2.3-beta.2",
+    "youtube-transcript": "^1.0.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vercel/node": "^3.1.5",
+    "typescript": "^5.4.5"
+  }
+}
