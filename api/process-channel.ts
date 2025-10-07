@@ -25,6 +25,46 @@ const getChannelIdFromUrl = (url: string): string | null => {
     }
 };
 
+const parsePublishedTextToDate = (publishedText: string): Date | null => {
+    if (!publishedText) return null;
+
+    const now = new Date();
+    const text = publishedText.toLowerCase();
+    const match = text.match(/(\d+)\s+(year|month|week|day|hour|minute)s?\s+ago/);
+
+    if (match) {
+        const [, value, unit] = match;
+        const quantity = parseInt(value, 10);
+        if (isNaN(quantity)) return null;
+
+        switch (unit) {
+            case 'year':
+                now.setFullYear(now.getFullYear() - quantity);
+                break;
+            case 'month':
+                now.setMonth(now.getMonth() - quantity);
+                break;
+            case 'week':
+                now.setDate(now.getDate() - quantity * 7);
+                break;
+            case 'day':
+                now.setDate(now.getDate() - quantity);
+                break;
+            case 'hour':
+                now.setHours(now.getHours() - quantity);
+                break;
+            case 'minute':
+                now.setMinutes(now.getMinutes() - quantity);
+                break;
+            default:
+                return null;
+        }
+        return now;
+    }
+    return null;
+};
+
+
 const writeEvent = (res: VercelResponse, event: object) => {
     res.write(JSON.stringify(event) + '\n');
 };
@@ -37,7 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { signal } = req;
 
     try {
-        const { channelUrl, language } = req.query;
+        const { channelUrl, language, dateFilter } = req.query;
 
         if (!channelUrl || typeof channelUrl !== 'string') {
             throw new Error('El parámetro de consulta `channelUrl` es obligatorio.');
@@ -69,7 +109,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             pagesLoaded++;
         }
 
-        const formattedVideos: VideoInfo[] = allVideoItems
+        let filteredVideoItems = allVideoItems;
+        if (dateFilter && dateFilter !== 'all') {
+            let cutoffDate = new Date();
+            if (dateFilter === 'last_month') {
+                cutoffDate.setMonth(cutoffDate.getMonth() - 1);
+            } else if (dateFilter === 'last_year') {
+                cutoffDate.setFullYear(cutoffDate.getFullYear() - 1);
+            }
+
+            filteredVideoItems = allVideoItems.filter(video => {
+                if (!video.publishedText) return false;
+                const publishedDate = parsePublishedTextToDate(video.publishedText);
+                return publishedDate ? publishedDate >= cutoffDate : false;
+            });
+        }
+
+        const formattedVideos: VideoInfo[] = filteredVideoItems
             .filter(video => video && video.videoId)
             .map((video: any) => ({
                 id: video.videoId,
@@ -78,7 +134,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }));
 
         if (formattedVideos.length === 0) {
-            throw new Error('No se encontraron videos para este canal.');
+            throw new Error('No se encontraron videos para este canal que coincidan con el filtro de fecha.');
         }
 
         writeEvent(res, { type: 'total', count: formattedVideos.length });

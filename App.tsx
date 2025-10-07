@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import type { VideoTranscript, VideoInfo } from './types';
-import { Language } from './types';
+import { Language, DateFilter } from './types';
 import { ChannelInputForm } from './components/ChannelInputForm';
 import { ProgressBar } from './components/ProgressBar';
 import { TranscriptViewer } from './components/TranscriptViewer';
@@ -19,6 +19,7 @@ interface StreamEvent {
 const App: React.FC = () => {
     const [channelUrl, setChannelUrl] = useState<string>('');
     const [language, setLanguage] = useState<Language>(Language.Spanish);
+    const [dateFilter, setDateFilter] = useState<DateFilter>(DateFilter.All);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [progress, setProgress] = useState<{ current: number; total: number; message: string }>({ current: 0, total: 0, message: '' });
     const [transcripts, setTranscripts] = useState<VideoTranscript[]>([]);
@@ -44,7 +45,12 @@ const App: React.FC = () => {
         setProgress({ current: 0, total: 0, message: 'Inicializando...' });
 
         try {
-            const response = await fetch(`/api/process-channel?channelUrl=${encodeURIComponent(channelUrl)}&language=${language}`, { signal });
+            const params = new URLSearchParams({
+                channelUrl,
+                language,
+                dateFilter,
+            });
+            const response = await fetch(`/api/process-channel?${params.toString()}`, { signal });
 
             if (!response.ok || !response.body) {
                 const errorData = await response.json().catch(() => ({ error: 'Error desconocido en el servidor.' }));
@@ -103,7 +109,7 @@ const App: React.FC = () => {
             setIsLoading(false);
             abortControllerRef.current = null;
         }
-    }, [channelUrl, language]);
+    }, [channelUrl, language, dateFilter]);
     
     const handleCancel = () => {
         if (abortControllerRef.current) {
@@ -122,6 +128,8 @@ const App: React.FC = () => {
                             setChannelUrl={setChannelUrl}
                             language={language}
                             setLanguage={setLanguage}
+                            dateFilter={dateFilter}
+                            setDateFilter={setDateFilter}
                             onExtract={handleExtract}
                             isLoading={isLoading}
                         />

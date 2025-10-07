@@ -14,3 +14,9 @@ export enum Language {
     English = 'en',
     Portuguese = 'pt',
 }
+
+export enum DateFilter {
+    All = 'all',
+    LastMonth = 'last_month',
+    LastYear = 'last_year',
+}

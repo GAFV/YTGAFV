@@ -1,12 +1,14 @@
 import React from 'react';
-import { Youtube, Languages, Film, LoaderCircle } from 'lucide-react';
-import { Language } from '../types';
+import { Youtube, Languages, Film, LoaderCircle, CalendarDays } from 'lucide-react';
+import { Language, DateFilter } from '../types';
 
 interface ChannelInputFormProps {
     channelUrl: string;
     setChannelUrl: (url: string) => void;
     language: Language;
     setLanguage: (lang: Language) => void;
+    dateFilter: DateFilter;
+    setDateFilter: (filter: DateFilter) => void;
     onExtract: () => void;
     isLoading: boolean;
 }
@@ -16,6 +18,8 @@ export const ChannelInputForm: React.FC<ChannelInputFormProps> = ({
     setChannelUrl,
     language,
     setLanguage,
+    dateFilter,
+    setDateFilter,
     onExtract,
     isLoading
 }) => {
@@ -33,22 +37,41 @@ export const ChannelInputForm: React.FC<ChannelInputFormProps> = ({
                 />
             </div>
 
-            <div className="space-y-2">
-                <label htmlFor="language-select" className="flex items-center space-x-2 text-gray-400">
-                    <Languages size={18} />
-                    <span>Idioma Preferido</span>
-                </label>
-                <select
-                    id="language-select"
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value as Language)}
-                    className="w-full bg-gray-900 border border-gray-600 rounded-md py-2 px-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
-                    disabled={isLoading}
-                >
-                    <option value={Language.Spanish}>Español</option>
-                    <option value={Language.English}>Inglés</option>
-                    <option value={Language.Portuguese}>Portugués</option>
-                </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <label htmlFor="language-select" className="flex items-center space-x-2 text-gray-400">
+                        <Languages size={18} />
+                        <span>Idioma Preferido</span>
+                    </label>
+                    <select
+                        id="language-select"
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value as Language)}
+                        className="w-full bg-gray-900 border border-gray-600 rounded-md py-2 px-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
+                        disabled={isLoading}
+                    >
+                        <option value={Language.Spanish}>Español</option>
+                        <option value={Language.English}>Inglés</option>
+                        <option value={Language.Portuguese}>Portugués</option>
+                    </select>
+                </div>
+                 <div className="space-y-2">
+                    <label htmlFor="date-filter-select" className="flex items-center space-x-2 text-gray-400">
+                        <CalendarDays size={18} />
+                        <span>Filtrar por Fecha</span>
+                    </label>
+                    <select
+                        id="date-filter-select"
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value as DateFilter)}
+                        className="w-full bg-gray-900 border border-gray-600 rounded-md py-2 px-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
+                        disabled={isLoading}
+                    >
+                        <option value={DateFilter.All}>Todo el tiempo</option>
+                        <option value={DateFilter.LastMonth}>Último mes</option>
+                        <option value={DateFilter.LastYear}>Último año</option>
+                    </select>
+                </div>
             </div>
 
             <button
