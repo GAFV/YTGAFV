@@ -1,0 +1,126 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { getChannelVideos } from 'yt-channel-info';
+import { YoutubeTranscript } from 'youtube-transcript';
+import type { VideoInfo, VideoTranscript } from '../types';
+
+// Helper to extract channel ID or username from a YouTube URL
+const getChannelIdFromUrl = (url: string): string | null => {
+    try {
+        const urlObject = new URL(url);
+        const path = urlObject.pathname.split('/').filter(p => p);
+
+        if (path[0] === 'c' || path[0].startsWith('@')) {
+            return path[0] + '/' + path[1];
+        }
+        if (path[0] === 'channel') {
+            return path[1];
+        }
+        if (path[0] === 'user') {
+             return path[1];
+        }
+        return null;
+    } catch (e) {
+        return url;
+    }
+};
+
+const writeEvent = (res: VercelResponse, event: object) => {
+    res.write(JSON.stringify(event) + '\n');
+};
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    
+    const { signal } = req;
+
+    try {
+        const { channelUrl, language } = req.query;
+
+        if (!channelUrl || typeof channelUrl !== 'string') {
+            throw new Error('El parámetro de consulta `channelUrl` es obligatorio.');
+        }
+        
+        const lang = typeof language === 'string' ? language : 'es';
+
+        const channelId = getChannelIdFromUrl(channelUrl);
+        if (!channelId) {
+            throw new Error('No se pudo determinar un identificador de canal válido desde la URL.');
+        }
+
+        // Fetch all videos with pagination
+        let allVideoItems: any[] = [];
+        let continuation = null;
+        let pagesLoaded = 0;
+        const MAX_PAGES = 50; // Safety limit
+
+        const initialResponse = await getChannelVideos({ channelId, sortBy: 'newest' });
+        allVideoItems.push(...initialResponse.items);
+        continuation = initialResponse.continuation;
+        pagesLoaded++;
+
+        while (continuation && pagesLoaded < MAX_PAGES) {
+            if (signal.aborted) throw new Error('Request aborted by user.');
+            const nextResponse = await getChannelVideos({ channelId, sortBy: 'newest', continuation });
+            allVideoItems.push(...nextResponse.items);
+            continuation = nextResponse.continuation;
+            pagesLoaded++;
+        }
+
+        const formattedVideos: VideoInfo[] = allVideoItems
+            .filter(video => video && video.videoId)
+            .map((video: any) => ({
+                id: video.videoId,
+                title: video.title,
+                url: `https://www.youtube.com/watch?v=${video.videoId}`,
+            }));
+
+        if (formattedVideos.length === 0) {
+            throw new Error('No se encontraron videos para este canal.');
+        }
+
+        writeEvent(res, { type: 'total', count: formattedVideos.length });
+
+        let processedCount = 0;
+        for (const video of formattedVideos) {
+            if (signal.aborted) throw new Error('Request aborted by user.');
+            
+            processedCount++;
+            writeEvent(res, { 
+                type: 'progress', 
+                count: processedCount, 
+                total: formattedVideos.length, 
+                message: `Procesando (${processedCount}/${formattedVideos.length}): "${video.title}"` 
+            });
+
+            let transcriptText = '[No disponible]';
+            try {
+                const transcriptParts = await YoutubeTranscript.fetchTranscript(video.id, { lang });
+                transcriptText = transcriptParts.map(part => part.text).join(' ');
+            } catch (transcriptError: any) {
+                if (transcriptError.message.includes('transcript is disabled')) {
+                    transcriptText = '[La transcripción está deshabilitada para este video]';
+                } else {
+                    console.warn(`Could not get transcript for ${video.id}: ${transcriptError.message}`);
+                    transcriptText = '[Error al obtener la transcripción]';
+                }
+            }
+
+            const transcriptData: VideoTranscript = { ...video, transcript: transcriptText };
+            writeEvent(res, { type: 'transcript', data: transcriptData });
+        }
+
+        writeEvent(res, { type: 'done', message: '¡Extracción completada!' });
+
+    } catch (error: any) {
+        console.error('Error in processing channel:', error);
+        if (!res.writableEnded) {
+            writeEvent(res, { type: 'error', message: error.message });
+        }
+    } finally {
+        if (!res.writableEnded) {
+            res.end();
+        }
+    }
+}
