@@ -46,13 +46,22 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ transcripts 
                 body: JSON.stringify({ transcripts, customPrompt }),
             });
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Ocurrió un error desconocido durante el análisis.');
+            if (!response.ok || !response.body) {
+                const errorText = await response.text().catch(() => 'Error desconocido en el servidor.');
+                throw new Error(errorText || 'Ocurrió un error desconocido durante el análisis.');
             }
             
-            setAnalysis(data.analysis);
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value, { stream: true });
+                setAnalysis(prev => prev + chunk);
+            }
+
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Ocurrió un error desconocido durante el análisis.';
             setAnalysisError(errorMessage);
@@ -115,11 +124,14 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ transcripts 
                 
                 {analysisError && <div className="mt-4 bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg">{analysisError}</div>}
                 
-                {analysis && (
+                {(analysis || isAnalyzing) && (
                     <div className="mt-6">
                         <h3 className="text-lg font-semibold mb-2 text-gray-300">Resultado del Análisis:</h3>
                         <div className="bg-gray-900 p-4 rounded-md border border-gray-600 max-h-80 overflow-y-auto">
-                            <p className="text-gray-300 whitespace-pre-wrap leading-relaxed">{analysis}</p>
+                            <p className="text-gray-300 whitespace-pre-wrap leading-relaxed">
+                                {analysis}
+                                {isAnalyzing && <span className="inline-block w-2 h-5 bg-purple-400 animate-pulse ml-1 align-bottom"></span>}
+                            </p>
                         </div>
                     </div>
                 )}

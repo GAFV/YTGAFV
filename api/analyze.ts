@@ -1,4 +1,3 @@
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI } from "@google/genai";
 import type { VideoTranscript } from '../types';
@@ -8,15 +7,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         res.setHeader('Allow', 'POST');
         return res.status(405).json({ error: 'Método no permitido' });
     }
+    
+    // Set headers for streaming
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
 
     const { transcripts, customPrompt } = req.body;
 
     if (!process.env.API_KEY) {
         console.error('API_KEY environment variable not set.');
-        return res.status(500).json({ error: 'Error de configuración del servidor: Falta la clave de API.' });
+        return res.status(500).send('Error de configuración del servidor: Falta la clave de API.');
     }
     if (!Array.isArray(transcripts) || transcripts.length === 0 || !customPrompt) {
-        return res.status(400).json({ error: 'Cuerpo de la solicitud no válido. Se requieren el array "transcripts" y "customPrompt".' });
+        return res.status(400).send('Cuerpo de la solicitud no válido. Se requieren el array "transcripts" y "customPrompt".');
     }
 
     try {
@@ -28,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             
         const userContent = `${customPrompt}\n\nAquí están las transcripciones para analizar:\n\n${combinedTranscripts}`;
 
-        const response = await ai.models.generateContent({
+        const stream = await ai.models.generateContentStream({
             model: 'gemini-2.5-flash',
             contents: userContent,
             config: {
@@ -38,9 +42,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
         });
 
-        return res.status(200).json({ analysis: response.text });
+        for await (const chunk of stream) {
+            res.write(chunk.text);
+        }
+        
+        res.end();
+
     } catch (error: any) {
         console.error("Error calling Gemini API:", error);
-        return res.status(500).json({ error: "Ocurrió un error al comunicarse con la API de Gemini.", details: error.message });
+        if (!res.writableEnded) {
+            res.status(500).send(`Ocurrió un error al comunicarse con la API de Gemini: ${error.message}`);
+        }
     }
 }
