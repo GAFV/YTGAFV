@@ -1,6 +1,6 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getChannelVideos } from 'yt-channel-info';
+import ytChannelInfo from 'yt-channel-info';
 import { YoutubeTranscript } from 'youtube-transcript';
 import type { VideoInfo, VideoTranscript } from '../types';
 
@@ -93,7 +93,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     
-    const { signal } = req;
+    const signal = (req as VercelRequest & { signal: AbortSignal }).signal;
 
     try {
         const { channelUrl, language, dateFilter } = req.query;
@@ -115,14 +115,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let pagesLoaded = 0;
         const MAX_PAGES = 50; // Safety limit
 
-        const initialResponse = await getChannelVideos({ channelId, sortBy: 'newest' });
+        const initialResponse = await ytChannelInfo.getChannelVideos({ channelId, sortBy: 'newest' });
         allVideoItems.push(...initialResponse.items);
         continuation = initialResponse.continuation;
         pagesLoaded++;
 
         while (continuation && pagesLoaded < MAX_PAGES) {
             if (signal.aborted) throw new Error('Request aborted by user.');
-            const nextResponse = await getChannelVideos({ channelId, sortBy: 'newest', continuation });
+            const nextResponse = await ytChannelInfo.getChannelVideos({ channelId, sortBy: 'newest', continuation } as any);
             allVideoItems.push(...nextResponse.items);
             continuation = nextResponse.continuation;
             pagesLoaded++;
