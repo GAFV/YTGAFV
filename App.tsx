@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import type { VideoTranscript, VideoInfo } from './types';
 import { Language } from './types';
 import { ChannelInputForm } from './components/ChannelInputForm';
@@ -7,6 +7,15 @@ import { TranscriptViewer } from './components/TranscriptViewer';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 
+// Define the structure of server-sent events
+interface StreamEvent {
+    type: 'total' | 'transcript' | 'progress' | 'error' | 'done';
+    count?: number;
+    total?: number;
+    message?: string;
+    data?: VideoTranscript;
+}
+
 const App: React.FC = () => {
     const [channelUrl, setChannelUrl] = useState<string>('');
     const [language, setLanguage] = useState<Language>(Language.Spanish);
@@ -14,6 +23,7 @@ const App: React.FC = () => {
     const [progress, setProgress] = useState<{ current: number; total: number; message: string }>({ current: 0, total: 0, message: '' });
     const [transcripts, setTranscripts] = useState<VideoTranscript[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     const handleExtract = useCallback(async () => {
         if (!channelUrl.trim()) {
@@ -21,65 +31,85 @@ const App: React.FC = () => {
             return;
         }
         
+        // Abort previous request if it's still running
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+        abortControllerRef.current = new AbortController();
+        const { signal } = abortControllerRef.current;
+
         setError(null);
         setIsLoading(true);
         setTranscripts([]);
         setProgress({ current: 0, total: 0, message: 'Inicializando...' });
 
         try {
-            setProgress({ current: 0, total: 0, message: 'Obteniendo la lista de videos del canal...' });
-            
-            const videosResponse = await fetch(`/api/get-videos?channelUrl=${encodeURIComponent(channelUrl)}`);
-            if (!videosResponse.ok) {
-                const errorData = await videosResponse.json();
-                throw new Error(errorData.error || `Error al obtener la lista de videos. Estado: ${videosResponse.status}`);
-            }
-            const videos: VideoInfo[] = await videosResponse.json();
-            
-            if (videos.length === 0) {
-                setError('No se encontraron videos para este canal o la URL es incorrecta.');
-                setIsLoading(false);
-                return;
+            const response = await fetch(`/api/process-channel?channelUrl=${encodeURIComponent(channelUrl)}&language=${language}`, { signal });
+
+            if (!response.ok || !response.body) {
+                const errorData = await response.json().catch(() => ({ error: 'Error desconocido en el servidor.' }));
+                throw new Error(errorData.error || `La solicitud al servidor falló con estado ${response.status}`);
             }
 
-            setProgress(prev => ({ ...prev, total: videos.length, message: `Se encontraron ${videos.length} videos. Iniciando extracción de transcripciones...` }));
-            
-            const extractedTranscripts: VideoTranscript[] = [];
-            for (let i = 0; i < videos.length; i++) {
-                const video = videos[i];
-                setProgress({ current: i + 1, total: videos.length, message: `Extrayendo transcripción para "${video.title}"...` });
-                
-                try {
-                    const transcriptResponse = await fetch(`/api/get-transcript?videoId=${video.id}&language=${language}`);
-                    const transcriptData = await transcriptResponse.json();
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
 
-                    const newTranscript: VideoTranscript = {
-                        ...video,
-                        transcript: transcriptData.transcript || '[Error al obtener la transcripción]',
-                    };
-                    extractedTranscripts.push(newTranscript);
-                    setTranscripts([...extractedTranscripts]);
-                } catch (e) {
-                    console.warn(`Could not fetch transcript for video ${video.id}:`, e);
-                     const newTranscript: VideoTranscript = {
-                        ...video,
-                        transcript: '[Falló la obtención de la transcripción]',
-                    };
-                    extractedTranscripts.push(newTranscript);
-                    setTranscripts([...extractedTranscripts]);
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() ?? '';
+
+                for (const line of lines) {
+                    if (line.trim() === '') continue;
+                    try {
+                        const event: StreamEvent = JSON.parse(line);
+                        
+                        switch (event.type) {
+                            case 'total':
+                                setProgress(prev => ({ ...prev, total: event.count ?? 0, message: `Se encontraron ${event.count} videos. Iniciando extracción...` }));
+                                break;
+                            case 'transcript':
+                                if (event.data) {
+                                    setTranscripts(prev => [...prev, event.data!]);
+                                }
+                                break;
+                            case 'progress':
+                                setProgress({ current: event.count ?? 0, total: event.total ?? 0, message: event.message ?? '' });
+                                break;
+                            case 'error':
+                                throw new Error(event.message);
+                            case 'done':
+                                setProgress(prev => ({ ...prev, message: event.message ?? 'Completado' }));
+                                break;
+                        }
+                    } catch (e) {
+                        console.warn('Error al procesar la línea del stream:', line, e);
+                    }
                 }
             }
-
-            setProgress({ current: videos.length, total: videos.length, message: '¡Extracción completada!' });
+             setProgress(prev => ({ ...prev, current: prev.total, message: '¡Extracción completada!' }));
 
         } catch (err) {
-            console.error(err);
-            const errorMessage = err instanceof Error ? err.message : 'Ocurrió un error desconocido.';
-            setError(`Error al extraer las transcripciones. ${errorMessage}`);
+            if (err instanceof Error && err.name !== 'AbortError') {
+                console.error(err);
+                const errorMessage = err.message || 'Ocurrió un error desconocido.';
+                setError(`Error durante la extracción. ${errorMessage}`);
+            }
         } finally {
             setIsLoading(false);
+            abortControllerRef.current = null;
         }
     }, [channelUrl, language]);
+    
+    const handleCancel = () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gray-900 text-gray-200 flex flex-col font-sans">
@@ -100,7 +130,7 @@ const App: React.FC = () => {
 
                     {(isLoading || transcripts.length > 0) && (
                         <div className="p-6 md:p-8 border-t border-gray-700">
-                            {isLoading && <ProgressBar progress={progress} />}
+                            {isLoading && <ProgressBar progress={progress} onCancel={handleCancel} />}
                             {transcripts.length > 0 && !isLoading && (
                                 <TranscriptViewer transcripts={transcripts} />
                             )}

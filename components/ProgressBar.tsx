@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { X } from 'lucide-react';
 
 interface ProgressBarProps {
     progress: {
@@ -7,15 +8,16 @@ interface ProgressBarProps {
         total: number;
         message: string;
     };
+    onCancel: () => void;
 }
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({ progress }) => {
+export const ProgressBar: React.FC<ProgressBarProps> = ({ progress, onCancel }) => {
     const percentage = progress.total > 0 ? (progress.current / progress.total) * 100 : 0;
 
     return (
         <div className="space-y-3 mb-6">
             <div className="flex justify-between items-center text-sm text-gray-400">
-                <span>{progress.message}</span>
+                <span className="truncate pr-4">{progress.message}</span>
                 <span>{progress.current} / {progress.total}</span>
             </div>
             <div className="w-full bg-gray-700 rounded-full h-2.5">
@@ -24,6 +26,13 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ progress }) => {
                     style={{ width: `${percentage}%` }}
                 ></div>
             </div>
+             <button
+                onClick={onCancel}
+                className="w-full text-center text-sm text-gray-400 hover:text-red-400 transition-colors"
+                aria-label="Cancelar extracción"
+             >
+                Cancelar
+            </button>
         </div>
     );
 };
