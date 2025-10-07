@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import type { VideoTranscript } from '../types';
 import { BotMessageSquare, Download, LoaderCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -34,6 +34,13 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ transcripts 
     const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
     const [analysisError, setAnalysisError] = useState<string | null>(null);
     const [customPrompt, setCustomPrompt] = useState<string>('Resume los temas clave y los temas recurrentes de estas transcripciones. Identifica el mensaje principal del canal basándote en este contenido.');
+    const analysisBoxRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (analysisBoxRef.current) {
+            analysisBoxRef.current.scrollTop = analysisBoxRef.current.scrollHeight;
+        }
+    }, [analysis]);
 
     const handleAnalyze = useCallback(async () => {
         setIsAnalyzing(true);
@@ -127,7 +134,7 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ transcripts 
                 {(analysis || isAnalyzing) && (
                     <div className="mt-6">
                         <h3 className="text-lg font-semibold mb-2 text-gray-300">Resultado del Análisis:</h3>
-                        <div className="bg-gray-900 p-4 rounded-md border border-gray-600 max-h-80 overflow-y-auto">
+                        <div ref={analysisBoxRef} className="bg-gray-900 p-4 rounded-md border border-gray-600 max-h-80 overflow-y-auto">
                             <p className="text-gray-300 whitespace-pre-wrap leading-relaxed">
                                 {analysis}
                                 {isAnalyzing && <span className="inline-block w-2 h-5 bg-purple-400 animate-pulse ml-1 align-bottom"></span>}
