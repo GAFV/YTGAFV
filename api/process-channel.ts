@@ -109,25 +109,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             throw new Error('No se pudo determinar un identificador de canal válido desde la URL.');
         }
 
-        // Fetch all videos with pagination
-        let allVideoItems: any[] = [];
-        let continuation = null;
-        let pagesLoaded = 0;
-        const MAX_PAGES = 50; // Safety limit
+        // --- PERFORMANCE FIX ---
+        // Fetch only the most recent videos (first page) to prevent server timeouts on Vercel,
+        // which was the cause of the "Unknown server error". The previous logic tried to fetch
+        // ALL videos from a channel, which is not feasible for large channels in a serverless environment.
+        const response = await ytChannelInfo.getChannelVideos({ channelId, sortBy: 'newest' });
+        const allVideoItems = response.items;
 
-        const initialResponse = await ytChannelInfo.getChannelVideos({ channelId, sortBy: 'newest' });
-        allVideoItems.push(...initialResponse.items);
-        continuation = initialResponse.continuation;
-        pagesLoaded++;
-
-        while (continuation && pagesLoaded < MAX_PAGES) {
-            if (signal.aborted) throw new Error('Request aborted by user.');
-            const nextResponse = await ytChannelInfo.getChannelVideos({ channelId, sortBy: 'newest', continuation } as any);
-            allVideoItems.push(...nextResponse.items);
-            continuation = nextResponse.continuation;
-            pagesLoaded++;
+        if (!allVideoItems || allVideoItems.length === 0) {
+            throw new Error('No se encontraron videos recientes en este canal.');
         }
-
+        
         let filteredVideoItems = allVideoItems;
         if (dateFilter && dateFilter !== 'all') {
             let cutoffDate = new Date();
