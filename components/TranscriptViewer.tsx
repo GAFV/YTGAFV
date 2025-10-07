@@ -8,18 +8,28 @@ interface TranscriptViewerProps {
 
 const TranscriptItem: React.FC<{ transcript: VideoTranscript, index: number }> = ({ transcript, index }) => {
     const [isOpen, setIsOpen] = useState(index < 3); // Open first 3 by default
+    const contentId = `transcript-content-${transcript.id}`;
+    const buttonId = `transcript-button-${transcript.id}`;
 
     return (
         <div className="bg-gray-800/50 border border-gray-700 rounded-lg">
             <button
+                id={buttonId}
                 onClick={() => setIsOpen(!isOpen)}
                 className="w-full flex justify-between items-center p-4 text-left"
+                aria-expanded={isOpen}
+                aria-controls={contentId}
             >
                 <span className="font-medium text-gray-300">{index + 1}. {transcript.title}</span>
                 {isOpen ? <ChevronUp className="text-gray-400" /> : <ChevronDown className="text-gray-400" />}
             </button>
             {isOpen && (
-                <div className="p-4 border-t border-gray-700">
+                <div
+                    id={contentId}
+                    role="region"
+                    aria-labelledby={buttonId}
+                    className="p-4 border-t border-gray-700"
+                >
                     <p className="text-gray-400 text-sm whitespace-pre-wrap font-mono leading-relaxed max-h-48 overflow-y-auto">
                         {transcript.transcript}
                     </p>
