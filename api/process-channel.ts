@@ -1,7 +1,7 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getChannelVideos } from 'yt-channel-info';
 import { YoutubeTranscript } from 'youtube-transcript';
-// Fix: Corrected import path for VideoInfo and VideoTranscript types
 import type { VideoInfo, VideoTranscript } from '../types';
 
 // Helper to extract channel ID or username from a YouTube URL
@@ -21,6 +21,7 @@ const getChannelIdFromUrl = (url: string): string | null => {
         }
         return null;
     } catch (e) {
+        // Fallback for cases where a raw ID/username is passed
         return url;
     }
 };
@@ -68,6 +69,24 @@ const parsePublishedTextToDate = (publishedText: string): Date | null => {
 const writeEvent = (res: VercelResponse, event: object) => {
     res.write(JSON.stringify(event) + '\n');
 };
+
+// Function to process a single video, designed for parallel execution.
+async function processVideo(video: VideoInfo, lang: string): Promise<VideoTranscript> {
+    let transcriptText: string;
+    try {
+        const transcriptParts = await YoutubeTranscript.fetchTranscript(video.id, { lang });
+        transcriptText = transcriptParts.map(part => part.text).join(' ');
+    } catch (transcriptError: any) {
+        if (transcriptError.message.includes('transcript is disabled')) {
+            transcriptText = '[La transcripción está deshabilitada para este video]';
+        } else {
+            console.warn(`Could not get transcript for ${video.id}: ${transcriptError.message}`);
+            transcriptText = '[Error al obtener la transcripción]';
+        }
+    }
+    return { ...video, transcript: transcriptText };
+}
+
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Content-Type', 'application/octet-stream');
@@ -139,33 +158,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         writeEvent(res, { type: 'total', count: formattedVideos.length });
 
+        // --- Performance Refactor: Parallel Processing ---
+        // Launch all transcript requests concurrently for a massive speed boost.
+        const transcriptPromises = formattedVideos.map(video => processVideo(video, lang));
+        
+        // Use Promise.allSettled to wait for all promises to complete,
+        // regardless of whether they succeed or fail. This is more robust.
+        const results = await Promise.allSettled(transcriptPromises);
+        
+        if (signal.aborted) throw new Error('Request aborted by user.');
+
         let processedCount = 0;
-        for (const video of formattedVideos) {
-            if (signal.aborted) throw new Error('Request aborted by user.');
-            
+        for (const result of results) {
             processedCount++;
-            writeEvent(res, { 
-                type: 'progress', 
-                count: processedCount, 
-                total: formattedVideos.length, 
-                message: `Procesando (${processedCount}/${formattedVideos.length}): "${video.title}"` 
-            });
-
-            let transcriptText = '[No disponible]';
-            try {
-                const transcriptParts = await YoutubeTranscript.fetchTranscript(video.id, { lang });
-                transcriptText = transcriptParts.map(part => part.text).join(' ');
-            } catch (transcriptError: any) {
-                if (transcriptError.message.includes('transcript is disabled')) {
-                    transcriptText = '[La transcripción está deshabilitada para este video]';
-                } else {
-                    console.warn(`Could not get transcript for ${video.id}: ${transcriptError.message}`);
-                    transcriptText = '[Error al obtener la transcripción]';
-                }
+            if (result.status === 'fulfilled') {
+                const transcriptData = result.value;
+                 writeEvent(res, { 
+                    type: 'progress', 
+                    count: processedCount, 
+                    total: formattedVideos.length, 
+                    message: `Procesando (${processedCount}/${formattedVideos.length}): "${transcriptData.title}"` 
+                });
+                writeEvent(res, { type: 'transcript', data: transcriptData });
+            } else {
+                 // Even if a promise was rejected, we log it and update progress.
+                 // We don't have video info here, so a generic message is used.
+                 console.error('Failed to process a video transcript:', result.reason);
+                 writeEvent(res, { 
+                    type: 'progress', 
+                    count: processedCount, 
+                    total: formattedVideos.length, 
+                    message: `Error en video ${processedCount}/${formattedVideos.length}`
+                });
             }
-
-            const transcriptData: VideoTranscript = { ...video, transcript: transcriptText };
-            writeEvent(res, { type: 'transcript', data: transcriptData });
         }
 
         writeEvent(res, { type: 'done', message: '¡Extracción completada!' });
@@ -173,7 +198,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (error: any) {
         console.error('Error in processing channel:', error);
         if (!res.writableEnded) {
-            writeEvent(res, { type: 'error', message: error.message });
+            // Avoid writing to a closed stream
+            if (error.name !== 'AbortError') {
+                writeEvent(res, { type: 'error', message: error.message });
+            }
         }
     } finally {
         if (!res.writableEnded) {

@@ -1,6 +1,6 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI } from "@google/genai";
-// Fix: Corrected import path for VideoTranscript type
 import type { VideoTranscript } from '../types';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -26,12 +26,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .map(t => `--- Video: ${t.title} ---\n${t.transcript}`)
             .join('\n\n');
             
-        const fullPrompt = `Please analyze the following collection of video transcripts from a single YouTube channel.\n\n${customPrompt}\n\nHere are the transcripts:\n\n${combinedTranscripts}`;
+        const userContent = `${customPrompt}\n\nAquí están las transcripciones para analizar:\n\n${combinedTranscripts}`;
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: fullPrompt,
+            contents: userContent,
             config: {
+                systemInstruction: "Eres un experto analista de contenido de YouTube. Tu tarea es analizar las transcripciones de video proporcionadas para identificar patrones, temas y responder a la solicitud del usuario de manera clara, estructurada y perspicaz. Proporciona tu análisis en formato de texto plano y bien formateado.",
                 temperature: 0.5,
                 topP: 0.95,
             }

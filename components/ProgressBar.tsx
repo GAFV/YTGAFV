@@ -29,7 +29,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ progress, onCancel }) 
              <button
                 onClick={onCancel}
                 className="w-full text-center text-sm text-gray-400 hover:text-red-400 transition-colors"
-                aria-label="Cancelar extracción"
+                aria-label="Cancelar el proceso de extracción de transcripciones"
              >
                 Cancelar
             </button>
