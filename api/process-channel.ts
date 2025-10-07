@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getChannelVideos } from 'yt-channel-info';
 import { YoutubeTranscript } from 'youtube-transcript';
-import type { VideoInfo, VideoTranscript } from '../types';
+// Fix: Corrected import path for VideoInfo and VideoTranscript types
+import type { VideoInfo, VideoTranscript } from '../src/types';
 
 // Helper to extract channel ID or username from a YouTube URL
 const getChannelIdFromUrl = (url: string): string | null => {
