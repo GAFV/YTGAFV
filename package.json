@@ -2,6 +2,7 @@
   "name": "youtube-transcript-ai-analyzer",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Extracts and analyzes YouTube transcripts with AI.",
   "scripts": {
     "dev": "vite",
