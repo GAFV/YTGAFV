@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI } from "@google/genai";
 // Fix: Corrected import path for VideoTranscript type
-import type { VideoTranscript } from '../src/types';
+import type { VideoTranscript } from '../types';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
